@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 简单的桌面背景 fallback */
+body {
+  background: radial-gradient(circle at center, #0f172a 0%, #071126 100%);
+  color: #fff;
+}
