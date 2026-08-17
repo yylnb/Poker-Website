@@ -19,3 +19,12 @@ Thumbs.db
 # IDE 配置
 .vscode/
 .idea/
+
+# SSL 私钥（敏感，严禁提交）
+*.key
+*.pem
+leonyeung.online_nginx/
+leonyeung.online_nginx.zip
+
+# 项目数据（WorkBuddy 记忆/计划）
+.workbuddy/

@@ -1,24 +1,29 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-start bg-[url('/src/assets/table-bg.jpg')] bg-cover bg-center p-safe">
-    <div class="relative w-full mx-auto px-3" style="max-width:980px; box-sizing: border-box;">
+  <div class="h-dvh flex flex-col items-center justify-start bg-[radial-gradient(circle_at_center,#0a0f0a,#000000)] overflow-hidden p-safe">
+    <div class="relative w-full mx-auto px-3 flex flex-col flex-1 min-h-0" style="max-width:980px; box-sizing: border-box;">
 
-      <!-- 左上角返回大厅按钮 -->
-      <button
-        @click="goLobby"
-        class="absolute top-2 left-2 z-50 px-3 py-1.5 rounded bg-gray-800/80 text-white text-sm hover:bg-gray-700"
-      >
-        返回大厅
-      </button>
+      <!-- 顶部：返回按钮 + 房间标题（flex-shrink-0 不参与滚动） -->
+      <div class="flex-shrink-0">
+        <!-- 左上角返回大厅按钮 -->
+        <button
+          @click="goLobby"
+          class="btn btn-ghost absolute top-2 left-2 z-50 px-3 py-1.5 text-sm"
+        >
+          返回大厅
+        </button>
 
-      <!-- 房间标题 -->
-      <div class="w-full text-center text-white/90 text-sm mt-10 mb-2">
-        德州扑克 -- 房间号：{{ store.roomId }}
+        <!-- 房间标题 -->
+        <div class="w-full text-center text-white/90 text-sm mt-10 mb-2">
+          德州扑克 -- 房间号：{{ store.roomId }}
+        </div>
       </div>
 
-      <!-- 中央：公共牌与底池显示 -->
-      <div class="mx-auto w-full mt-3 sm:mt-5" style="max-width:900px;">
+      <!-- 中部可滚动区：台面 + 玩家区（顶部和底部控制栏均不滚动） -->
+      <div class="game-mid flex-1 min-h-0 overflow-y-auto">
+        <!-- 中央：公共牌与底池显示 -->
+        <div class="mx-auto w-full mt-3 sm:mt-5" style="max-width:900px;">
         <div
-          class="mx-auto rounded-xl bg-emerald-900/90 shadow-2xl flex items-center justify-center"
+          class="mx-auto glass-card bg-emerald-900/50 flex items-center justify-center"
           :style="tableStyle"
         >
           <div class="flex flex-col items-center gap-3 p-3 w-full">
@@ -26,7 +31,8 @@
               <div
                 v-for="(card, idx) in communityCards"
                 :key="idx"
-                class="w-16 sm:w-20 h-24 sm:h-28 bg-white text-black flex items-center justify-center rounded-lg shadow-md text-sm sm:text-lg"
+                class="community-card w-12 sm:w-20 h-24 sm:h-28 bg-white flex items-center justify-center rounded-lg shadow-md text-sm sm:text-lg"
+                :class="cardColor(card)"
               >
                 {{ card }}
               </div>
@@ -61,7 +67,8 @@
           <div
             v-for="(player, index) in players"
             :key="player.id"
-            class="player-card rounded-xl shadow-md bg-black/60 backdrop-blur-sm text-white p-3 flex gap-3 items-center w-full"
+            class="player-card glass-card text-white p-3 flex gap-3 items-center w-full"
+            :class="{ 'turn-active': currentTurnId === player.id }"
           >
             <div
               class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
@@ -78,14 +85,14 @@
                   :key="cIndex"
                   class="w-11 h-14 rounded-lg bg-white text-black flex items-center justify-center text-xs"
                 >
-                  <span v-if="isLocalPlayer(player) || stage === 'showdown'">{{ card }}</span>
+                  <span v-if="isLocalPlayer(player) || stage === 'showdown'" :class="cardColor(card)">{{ card }}</span>
                   <span v-else>?</span>
                 </div>
               </div>
 
               <div class="text-xs text-white/90">
                 <div class="font-medium truncate">{{ player.chips }}K</div>
-                <div v-if="player.currentBet" class="text-[11px] text-yellow-200">注: {{ player.currentBet }}K</div>
+                <div v-if="player.currentBet" class="bet-chip text-[11px] text-yellow-200" :key="player.currentBet">注: {{ player.currentBet }}K</div>
                 <div v-if="player.folded" class="text-[11px] text-red-300">已弃</div>
                 <div v-if="currentTurnId === player.id" class="mt-1 inline-block px-2 py-0.5 text-[11px] bg-yellow-300 text-black rounded">
                   当前回合
@@ -99,7 +106,8 @@
           <div
             v-for="(player, index) in players"
             :key="player.id"
-            class="player-card rounded-xl shadow-md bg-black/60 backdrop-blur-sm text-white p-3 flex gap-3 items-center w-44"
+            class="player-card glass-card text-white p-3 flex gap-3 items-center w-44"
+            :class="{ 'turn-active': currentTurnId === player.id }"
           >
             <div
               class="w-14 h-14 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
@@ -116,14 +124,14 @@
                   :key="cIndex"
                   class="w-12 h-16 rounded-lg bg-white text-black flex items-center justify-center text-xs"
                 >
-                  <span v-if="isLocalPlayer(player) || stage === 'showdown'">{{ card }}</span>
+                  <span v-if="isLocalPlayer(player) || stage === 'showdown'" :class="cardColor(card)">{{ card }}</span>
                   <span v-else>?</span>
                 </div>
               </div>
 
               <div class="text-xs text-white/90">
                 <div class="font-medium truncate">{{ player.chips }}K</div>
-                <div v-if="player.currentBet" class="text-[11px] text-yellow-200">注: {{ player.currentBet }}K</div>
+                <div v-if="player.currentBet" class="bet-chip text-[11px] text-yellow-200" :key="player.currentBet">注: {{ player.currentBet }}K</div>
                 <div v-if="player.folded" class="text-[11px] text-red-300">已弃</div>
                 <div v-if="currentTurnId === player.id" class="mt-1 inline-block px-2 py-0.5 text-[11px] bg-yellow-300 text-black rounded">
                   当前回合
@@ -133,33 +141,27 @@
           </div>
         </div>
       </div>
+      </div>
+      <!-- /中部可滚动区 -->
 
       <!-- 控制栏：桌面与移动分别渲染 -->
       <!-- Desktop: 保持原有横向控制栏 -->
       <div v-if="!isMobile" class="fixed bottom-2 left-1/2 -translate-x-1/2 w-full max-w-[980px] px-3 z-40">
-        <div class="bg-black/50 backdrop-blur-sm rounded-xl p-2 flex flex-col gap-2 items-center no-scrollbar">
+        <div class="glass-bar p-2 flex flex-col gap-2 items-center no-scrollbar">
           <div class="w-full flex items-center gap-2">
             <button
               @click="startGame"
               :disabled="!isOwner || stage === 'showdown'"
-              :class="['min-w-[90px] px-3 py-2 rounded-lg text-white text-sm', isOwner && stage !== 'showdown' ? 'bg-blue-600' : 'bg-gray-400 cursor-not-allowed']"
+              class="btn btn-owner min-w-[90px] px-3 py-2 text-sm"
             >
               开始游戏
-            </button>
-
-            <button
-              @click="nextStage"
-              :disabled="!isOwner"
-              :class="['min-w-[90px] px-3 py-2 rounded-lg text-white text-sm', isOwner ? 'bg-red-600' : 'bg-gray-400 cursor-not-allowed']"
-            >
-              下一阶段
             </button>
 
             <button
               v-if="stage === 'showdown'"
               @click="restartGame"
               :disabled="!isOwner"
-              :class="['min-w-[90px] px-3 py-2 rounded-lg text-white text-sm', isOwner ? 'bg-violet-600' : 'bg-gray-400 cursor-not-allowed']"
+              class="btn btn-call min-w-[90px] px-3 py-2 text-sm"
             >
               Restart
             </button>
@@ -169,22 +171,22 @@
               <button
                 @click="doCall"
                 :disabled="!isMyTurn"
-                class="min-w-[70px] px-3 py-2 rounded bg-indigo-600 text-white text-sm flex flex-col items-center leading-tight"
+                class="btn btn-call min-w-[70px] px-3 py-2 text-sm flex flex-col items-center leading-tight"
               >
                 <span>Call</span>
                 <span class="btn-subtext">跟注</span>
               </button>
 
               <!-- 快捷加注 -->
-              <button @click="doRaise(10)" :disabled="!isMyTurn" class="min-w-[70px] px-3 py-2 rounded bg-orange-500 text-white text-sm">+10K</button>
-              <button @click="doRaise(50)" :disabled="!isMyTurn" class="min-w-[70px] px-3 py-2 rounded bg-orange-500 text-white text-sm">+50K</button>
-              <button @click="doRaise(100)" :disabled="!isMyTurn" class="min-w-[70px] px-3 py-2 rounded bg-orange-500 text-white text-sm">+100K</button>
+              <button @click="doRaise(10)" :disabled="!isMyTurn" class="btn btn-raise min-w-[70px] px-3 py-2 text-sm">+10K</button>
+              <button @click="doRaise(50)" :disabled="!isMyTurn" class="btn btn-raise min-w-[70px] px-3 py-2 text-sm">+50K</button>
+              <button @click="doRaise(100)" :disabled="!isMyTurn" class="btn btn-raise min-w-[70px] px-3 py-2 text-sm">+100K</button>
 
               <!-- Check -->
               <button
                 @click="doCheck"
                 :disabled="!isMyTurn || !canCheck"
-                class="min-w-[70px] px-3 py-2 rounded bg-slate-600 text-white text-sm flex flex-col items-center leading-tight"
+                class="btn btn-check min-w-[70px] px-3 py-2 text-sm flex flex-col items-center leading-tight"
               >
                 <span>Check</span>
                 <span class="btn-subtext">过牌</span>
@@ -194,7 +196,7 @@
               <button
                 @click="doFold"
                 :disabled="!isMyTurn"
-                class="min-w-[70px] px-3 py-2 rounded bg-stone-700 text-white text-sm flex flex-col items-center leading-tight"
+                class="btn btn-fold min-w-[70px] px-3 py-2 text-sm flex flex-col items-center leading-tight"
               >
                 <span>Fold</span>
                 <span class="btn-subtext">弃牌</span>
@@ -220,10 +222,20 @@
             <button
               @click="doRaise(raiseSlider)"
               :disabled="!isMyTurn || raiseSlider <= 0"
-              class="px-3 py-2 rounded bg-amber-500 text-black text-sm flex flex-col items-center leading-tight"
+              class="btn btn-raise px-3 py-2 text-sm flex flex-col items-center leading-tight"
             >
               <span>Raise</span>
-              <span class="btn-subtext text-black/80">加注</span>
+              <span class="btn-subtext">加注</span>
+            </button>
+
+            <!-- All-in -->
+            <button
+              @click="doAllIn"
+              :disabled="!isMyTurn"
+              class="btn btn-allin px-3 py-2 text-sm flex flex-col items-center leading-tight"
+            >
+              <span>All-in</span>
+              <span class="btn-subtext">全押</span>
             </button>
 
             <div class="ml-auto text-xs text-white/80 px-2">Pot: {{ pot }}K</div>
@@ -237,13 +249,12 @@
            :style="{ left: '8px', right: '8px', bottom: '8px', maxWidth: 'calc(100vw - 16px)' }"
       >
         <div
-          class="bg-black/72 backdrop-blur-sm rounded-xl mobile-controls"
+          class="glass-bar mobile-controls"
           :style="{ paddingBottom: 'env(safe-area-inset-bottom)', boxSizing: 'border-box' }"
         >
-          <!-- 房主小控制（三列） -->
-          <div class="grid grid-cols-3 gap-2 p-2">
+          <!-- 房主小控制 -->
+          <div class="grid grid-cols-2 gap-2 p-2">
             <button @click="startGame" :disabled="!isOwner || stage === 'showdown'" :class="['mobile-btn small owner', isOwner && stage !== 'showdown' ? 'owner-enabled' : 'owner-disabled']">开始游戏</button>
-            <button @click="nextStage" :disabled="!isOwner" :class="['mobile-btn small owner', isOwner ? 'owner-enabled' : 'owner-disabled']">下一阶段</button>
             <button v-if="stage === 'showdown'" @click="restartGame" :disabled="!isOwner" :class="['mobile-btn small owner', isOwner ? 'owner-enabled' : 'owner-disabled']">Restart</button>
           </div>
 
@@ -284,10 +295,11 @@
           </div>
 
           <!-- 快捷加注三列（保持单行文案，不加中文解释） -->
-          <div class="grid grid-cols-3 gap-2 p-2">
+          <div class="grid grid-cols-4 gap-2 p-2">
             <button @click="doRaise(10)" :disabled="!isMyTurn" class="mobile-btn quick">+10K</button>
             <button @click="doRaise(50)" :disabled="!isMyTurn" class="mobile-btn quick">+50K</button>
             <button @click="doRaise(100)" :disabled="!isMyTurn" class="mobile-btn quick">+100K</button>
+            <button @click="doAllIn" :disabled="!isMyTurn" class="mobile-btn allin">All-in</button>
           </div>
         </div>
       </div>
@@ -295,10 +307,10 @@
       <!-- Showdown Modal -->
       <transition name="modal" enter-active-class="ease-out duration-300" leave-active-class="ease-in duration-200">
         <div v-if="showdownModal" class="fixed inset-0 z-50 flex items-center justify-center">
-          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeModal"></div>
+          <div class="absolute inset-0 glass-overlay" @click="closeModal"></div>
 
           <div
-            class="relative bg-white rounded-2xl shadow-2xl p-6 w-[720px] max-w-[95%] transform transition-transform"
+            class="relative bg-white/95 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-6 w-[720px] max-w-[95%] transform transition-transform"
             :class="{'scale-100 opacity-100': showdownModal, 'scale-95 opacity-0': !showdownModal}"
           >
             <div class="flex items-center justify-between mb-4">
@@ -339,8 +351,22 @@
             </div>
 
             <div class="mt-4 flex justify-end gap-2">
-              <button v-if="isOwner" @click="restartGame" class="px-4 py-2 rounded bg-violet-600 text-white hover:bg-violet-700">Restart</button>
-              <button @click="closeModal" class="px-4 py-2 rounded border">关闭</button>
+              <button v-if="isOwner" @click="restartGame" class="btn btn-call px-4 py-2">Restart</button>
+              <button @click="closeModal" class="btn btn-ghost px-4 py-2">关闭</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <!-- 轮次提示全屏 overlay -->
+      <transition name="announce">
+        <div v-if="announcement.show"
+             class="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+          <div class="glass-overlay absolute inset-0"></div>
+          <div class="relative text-center px-6">
+            <div class="text-white/70 text-base sm:text-lg tracking-[0.4em] mb-3">下一轮</div>
+            <div class="announce-text text-5xl sm:text-7xl font-bold text-white drop-shadow-2xl">
+              {{ announcement.text }}
             </div>
           </div>
         </div>
@@ -352,8 +378,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { io } from "socket.io-client";
+import { useRouter } from "vue-router";
 import { useUserStore } from "../stores/user";
+import { actionFeedback } from "../utils/feedback";
 
+const router = useRouter();
 const store = useUserStore();
 // io() initialization unchanged
 const socket = io();
@@ -441,6 +470,7 @@ onMounted(() => {
     players.value = room.players;
     currentTurnId.value = room.currentTurnId || null;
     currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
+    if (stageTextMap[room.stage]) showAnnounce("下一轮：" + stageTextMap[room.stage]);
   });
 
   socket.on("betPlaced", (room) => {
@@ -467,10 +497,7 @@ onMounted(() => {
     pot.value = room.pot || pot.value;
     currentTurnId.value = room.currentTurnId || null;
     currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
-
-    if (socket.id === room.ownerId) {
-      alert("本轮下注已结束 — 你是房主，可点击「下一阶段」推进游戏。");
-    }
+    // 阶段推进由服务端自动完成，紧接着的 stageUpdated 会更新公共牌与新回合
   });
 
   socket.on("showdown", ({ pots, room }) => {
@@ -480,6 +507,7 @@ onMounted(() => {
     stage.value = room.stage || "showdown";
     currentTurnId.value = room.currentTurnId || null;
     showdownModal.value = true;
+    if (stageTextMap.showdown) showAnnounce("下一轮：" + stageTextMap.showdown);
   });
 
   socket.on("errorMessage", (err) => {
@@ -490,11 +518,32 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   socket.disconnect();
+  if (announceTimer) clearTimeout(announceTimer);
 });
 
 function isLocalPlayer(player) {
   return player.id === socket.id;
 }
+
+function cardColor(card) {
+  return (card.includes('♥') || card.includes('♦')) ? 'text-red-600' : 'text-gray-800';
+}
+
+// 轮次提示
+const announcement = ref({ show: false, text: "" });
+let announceTimer = null;
+function showAnnounce(text) {
+  announcement.value = { show: true, text };
+  if (announceTimer) clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => { announcement.value.show = false; }, 2500);
+}
+const stageTextMap = {
+  preflop: "翻牌前",
+  flop: "翻牌圈",
+  turn: "转牌圈",
+  river: "河牌圈",
+  showdown: "最终摊牌"
+};
 
 const isOwner = computed(() => socket.id === ownerId.value);
 const isMyTurn = computed(() => socket.id === currentTurnId.value && localPlayer.value && !localPlayer.value.folded && localPlayer.value.chips > 0 && stage.value !== "showdown");
@@ -505,17 +554,23 @@ const canCheck = computed(() => {
 });
 
 function startGame() { socket.emit("startGame", store.roomId); }
-function nextStage() { socket.emit("nextStage", store.roomId); }
 function restartGame() { if (!isOwner.value) return; socket.emit("restartGame", { roomId: store.roomId }); }
-function doCall() { if (!isMyTurn.value) return; socket.emit("call", { roomId: store.roomId }); }
+function doCall() { if (!isMyTurn.value) return; actionFeedback("call"); socket.emit("call", { roomId: store.roomId }); }
 function doRaise(amount) {
   const amt = Math.max(0, Math.floor(Number(amount) || 0));
   if (!isMyTurn.value) return;
   if (amt <= 0) return;
+  actionFeedback("raise");
   socket.emit("raise", { roomId: store.roomId, raiseAmount: amt });
 }
-function doFold() { if (!isMyTurn.value) return; socket.emit("fold", { roomId: store.roomId }); }
-function doCheck() { if (!isMyTurn.value) return; socket.emit("check", { roomId: store.roomId }); }
+
+function doAllIn() {
+  if (!isMyTurn.value || !localPlayer.value) return;
+  actionFeedback("allin");
+  socket.emit("raise", { roomId: store.roomId, raiseAmount: localPlayer.value.chips });
+}
+function doFold() { if (!isMyTurn.value) return; actionFeedback("fold"); socket.emit("fold", { roomId: store.roomId }); }
+function doCheck() { if (!isMyTurn.value) return; actionFeedback("check"); socket.emit("check", { roomId: store.roomId }); }
 
 function closeModal() {
   showdownModal.value = false;
@@ -554,6 +609,37 @@ function goLobby() {
 </script>
 
 <style>
+/* 中部游戏区滚动（台面 + 玩家卡），顶部和底部控制栏不滚 */
+.game-mid {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge */
+}
+.game-mid::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
+@media (max-width: 420px)  { .game-mid { padding-bottom: 240px; } }
+@media (min-width: 421px)  { .game-mid { padding-bottom: 100px; } }
+
+/* 轮次提示全屏动画 */
+.announce-enter-active { transition: opacity .3s ease-out; }
+.announce-leave-active { transition: opacity .5s ease-in; }
+.announce-enter-from, .announce-leave-to { opacity: 0; }
+.announce-enter-to, .announce-leave-from { opacity: 1; }
+@keyframes announce-in {
+  0%   { transform: scale(0.7); }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.announce-text { animation: announce-in .5s ease-out; }
+
+/* 当前回合玩家卡脉冲发光 */
+.turn-active { animation: turn-pulse 1.6s ease-in-out infinite; border-color: rgba(250,204,21,.6); }
+
+/* 公共牌发牌动画 */
+.community-card { animation: card-deal .35s ease-out; }
+
+/* 下注筹码弹出动画 */
+.bet-chip { animation: chip-bet .25s ease-out; }
+
 /* modal transitions */
 .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95); }
 .modal-enter-to, .modal-leave-from { opacity: 1; transform: scale(1); }

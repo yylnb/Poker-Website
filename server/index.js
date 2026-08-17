@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "*", // 部署上线后可以改成你的前端域名
   },
 });
 
@@ -98,7 +98,65 @@ function checkBettingRoundEnd(room) {
     playersActed: room.playersActed || []
   });
 
+  // 本轮下注结束 -> 系统自动推进到下一阶段（无需房主手动点"下一阶段"）
+  advanceStage(room);
+
   return true;
+}
+
+// 自动推进到下一阶段（替代原手动 nextStage 触发）
+// ante    -> preflop（发底牌，不开公共牌）
+// preflop -> flop（发三张翻牌）
+// flop    -> turn
+// turn    -> river
+// river   -> showdown（计算边池并分配）
+function advanceStage(room) {
+  if (!room) return;
+
+  // 清空本轮 currentBet（下注已即时加入 pot）
+  room.players.forEach((p) => { p.currentBet = 0; });
+  room.currentMaxBet = 0;
+
+  if (room.stage === "ante") {
+    // 底注轮结束 -> 发底牌（仅给非弃牌玩家），不发公共牌
+    room.players.forEach((p) => {
+      if (!p.folded && (!p.hand || p.hand.length === 0)) {
+        p.hand = [room.deck.pop(), room.deck.pop()];
+      }
+    });
+    room.stage = "preflop";
+  } else if (room.stage === "preflop") {
+    // preflop 下注轮结束 -> 发三张翻牌（公共牌）
+    room.communityCards = [room.deck.pop(), room.deck.pop(), room.deck.pop()];
+    room.stage = "flop";
+  } else if (room.stage === "flop") {
+    room.communityCards.push(room.deck.pop());
+    room.stage = "turn";
+  } else if (room.stage === "turn") {
+    room.communityCards.push(room.deck.pop());
+    room.stage = "river";
+  } else if (room.stage === "river") {
+    // 进入摊牌阶段 -> 计算 side-pot 并分配
+    room.stage = "showdown";
+    const potResults = computeAndDistributePots(room);
+    io.to(room.id).emit("showdown", { pots: potResults, room });
+    return;
+  } else {
+    // showdown 或未知阶段，不推进
+    return;
+  }
+
+  // 新一轮下注初始化（非 showdown）
+  room.playersActed = [];
+  room.bettingRoundActive = true;
+  const firstIdx = room.players.findIndex((p) => !p.folded && p.chips > 0);
+  room.currentTurnId = firstIdx >= 0 ? room.players[firstIdx].id : null;
+
+  io.to(room.id).emit("stageUpdated", room);
+  io.to(room.id).emit("turnUpdated", {
+    currentTurnId: room.currentTurnId,
+    currentTurnNickname: room.players.find(p => p.id === room.currentTurnId)?.nickname || null
+  });
 }
 
 /* ----------------
@@ -381,17 +439,24 @@ io.on("connection", (socket) => {
 
     room.deck = generateDeck();
     room.communityCards = [];
-    room.stage = "preflop";
-    room.currentMaxBet = 0;
+    room.stage = "ante"; // 底注轮（未发底牌），底注轮结束后才进 preflop
+    room.pot = 0; // 底注前先清空底池，底池金额全部来自玩家底注
     room.playersActed = [];
     room.bettingRoundActive = true;
 
+    // 底注（ante）：每位参与玩家自动下注 10K，作为本轮起始下注。
+    // 底注完成后开启一轮下注，玩家可 check/raise/fold；
+    // 等本轮无人再加注（bettingRoundEnded）后再发底牌。
+    room.currentMaxBet = 10;
     room.players.forEach((player) => {
-      player.hand = [room.deck.pop(), room.deck.pop()];
-      player.currentBet = 0;
-      player.totalContribution = 0;
+      player.hand = []; // 底牌待底注轮结束后再发
       player.folded = false;
       if (typeof player.chips !== "number") player.chips = 3000;
+      const ante = Math.min(10, player.chips); // 筹码不足则全押
+      player.chips -= ante;
+      player.currentBet = ante;
+      player.totalContribution = ante;
+      room.pot += ante;
     });
 
     const firstIdx = room.players.findIndex((p) => !p.folded && p.chips > 0);
@@ -404,7 +469,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 重启游戏（仅房主）：保留 chips，重设 pot=200，并发新牌
+  // 重启游戏（仅房主）：保留 chips，收底注并发新牌
   socket.on("restartGame", ({ roomId }) => {
     const room = rooms[roomId];
     if (!room) return;
@@ -415,18 +480,22 @@ io.on("connection", (socket) => {
 
     room.deck = generateDeck();
     room.communityCards = [];
-    room.stage = "preflop";
-    room.currentMaxBet = 0;
+    room.stage = "ante"; // 底注轮（未发底牌）
+    room.pot = 0; // 底注前先清空底池
     room.playersActed = [];
     room.bettingRoundActive = true;
-    room.pot = 200; // reset pot to 200 (K)
 
+    // 底注（ante）：每位参与玩家自动下注 10K（与 startGame 一致）
+    room.currentMaxBet = 10;
     room.players.forEach((player) => {
-      player.hand = [room.deck.pop(), room.deck.pop()];
-      player.currentBet = 0;
-      player.totalContribution = 0;
+      player.hand = []; // 底牌待底注轮结束后再发
       player.folded = false;
       // chips 保持不变（carry chips）
+      const ante = Math.min(10, player.chips); // 筹码不足则全押
+      player.chips -= ante;
+      player.currentBet = ante;
+      player.totalContribution = ante;
+      room.pot += ante;
     });
 
     const firstIdx = room.players.findIndex((p) => !p.folded && p.chips > 0);
@@ -643,51 +712,6 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 下一阶段（仅房主）
-  socket.on("nextStage", (roomId) => {
-    const room = rooms[roomId];
-    if (!room) return;
-    if (socket.id !== room.ownerId) {
-      socket.emit("errorMessage", { message: "只有房主可以推进阶段" });
-      return;
-    }
-
-    // 清空本轮 currentBet（下注已经即时加入 pot）
-    room.players.forEach((p) => {
-      p.currentBet = 0;
-    });
-    room.currentMaxBet = 0;
-
-    if (room.stage === "preflop") {
-      room.communityCards = [room.deck.pop(), room.deck.pop(), room.deck.pop()];
-      room.stage = "flop";
-    } else if (room.stage === "flop") {
-      room.communityCards.push(room.deck.pop());
-      room.stage = "turn";
-    } else if (room.stage === "turn") {
-      room.communityCards.push(room.deck.pop());
-      room.stage = "river";
-    } else if (room.stage === "river") {
-      // 进入摊牌阶段 -> 计算 side-pot 并分配
-      room.stage = "showdown";
-      const potResults = computeAndDistributePots(room);
-      io.to(roomId).emit("showdown", { pots: potResults, room });
-      return;
-    }
-
-    // 新一轮下注初始化（如果不是 showdown）
-    room.playersActed = [];
-    room.bettingRoundActive = true;
-    const firstIdx = room.players.findIndex((p) => !p.folded && p.chips > 0);
-    room.currentTurnId = firstIdx >= 0 ? room.players[firstIdx].id : null;
-
-    io.to(roomId).emit("stageUpdated", room);
-    io.to(roomId).emit("turnUpdated", {
-      currentTurnId: room.currentTurnId,
-      currentTurnNickname: room.players.find(p => p.id === room.currentTurnId)?.nickname || null
-    });
-  });
-
   // 断开连接
   socket.on("disconnect", () => {
     console.log("用户断开:", socket.id);
@@ -715,10 +739,18 @@ io.on("connection", (socket) => {
   });
 });
 
-// server.listen(3001, "192.168.1.11", () => {
-//   console.log("✅ 服务器运行在 http://192.168.1.11:3001");
+
+// server.listen(3001, "0.0.0.0", () => {
+//   console.log("✅ 服务器运行在 http://0.0.0.0:3001 （可从局域网访问）");
 // });
 
-server.listen(3001, "0.0.0.0", () => {
-  console.log("✅ 服务器运行在 http://0.0.0.0:3001 （可从局域网访问）");
+// ============= 改造 server.listen =============
+const PORT = process.env.PORT || 3001;  // Render 会注入 PORT
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ 服务器运行在端口 ${PORT}`);
+});
+
+// 给 Render 的健康检查用（可选）
+app.get("/", (req, res) => {
+  res.send("Server is running 🚀");
 });

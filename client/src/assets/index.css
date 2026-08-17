@@ -8,6 +8,189 @@ html, body, #app {
 
 /* 简单的桌面背景 fallback */
 body {
-  background: radial-gradient(circle at center, #0f172a 0%, #071126 100%);
+  background: radial-gradient(circle at center, #0a0f0a 0%, #000000 100%);
   color: #fff;
+}
+
+/* ============================================================
+   设计令牌：玻璃质感 + 动作按钮配色（精致明显档）
+   ============================================================ */
+:root {
+  /* 玻璃 */
+  --glass-bg:        rgba(255, 255, 255, 0.06);
+  --glass-bg-strong: rgba(255, 255, 255, 0.10);
+  --glass-border:    rgba(255, 255, 255, 0.14);
+  --glass-blur:      14px;
+  --glass-blur-lg:   18px;
+  --glass-shadow:    0 8px 32px rgba(2, 6, 23, 0.55);
+  --radius-glass:    16px;
+
+  /* 动作按钮 */
+  --btn-call:    #4f46e5; --btn-call-hi:    #6366f1;
+  --btn-check:   #475569; --btn-check-hi:   #64748b;
+  --btn-fold:    #b91c1c; --btn-fold-hi:    #dc2626;
+  --btn-raise:   #f59e0b; --btn-raise-hi:   #fbbf24;
+  --btn-allin:   #db2777; --btn-allin-hi:   #ec4899;
+  --btn-primary: #f59e0b; --btn-primary-hi: #fbbf24;
+  --btn-owner:   #16a34a; --btn-owner-hi:   #22c55e;
+}
+
+/* ============================================================
+   玻璃容器 + 交互按钮 组件层
+   ============================================================ */
+@layer components {
+  /* 玻璃卡片：玩家卡、台面、登录卡 */
+  .glass-card {
+    background: var(--glass-bg-strong);
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: var(--radius-glass);
+  }
+
+  /* 玻璃控制栏：桌面/移动底部操作栏 */
+  .glass-bar {
+    background: rgba(8, 12, 28, 0.55);
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+    backdrop-filter: blur(var(--glass-blur-lg));
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 -2px 24px rgba(2, 6, 23, 0.5);
+    border-radius: 14px;
+  }
+
+  /* 玻璃遮罩：模态背景层 */
+  .glass-overlay {
+    background: rgba(2, 6, 23, 0.55);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  /* 玻璃输入框 */
+  .glass-input {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    transition: all 0.18s;
+  }
+  .glass-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+  }
+
+  /* ---------- 交互按钮基类 + 变体 ---------- */
+  .btn {
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    padding: 0.55rem 1rem;
+    color: #fff;
+    border: 1px solid transparent;
+    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.18s, filter 0.18s, background 0.18s;
+    will-change: transform;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  }
+  .btn:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+  }
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35),
+               0 0 0 5px rgba(99, 102, 241, 0.55);
+  }
+  .btn:disabled {
+    background: #6b7280;
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.7);
+    pointer-events: none;
+  }
+
+  .btn-call    { background: var(--btn-call); }
+  .btn-call:hover    { background: var(--btn-call-hi); }
+  .btn-check   { background: var(--btn-check); }
+  .btn-check:hover   { background: var(--btn-check-hi); }
+  .btn-fold    { background: var(--btn-fold); }
+  .btn-fold:hover    { background: var(--btn-fold-hi); }
+  .btn-raise   { background: var(--btn-raise); color: #071126; }
+  .btn-raise:hover   { background: var(--btn-raise-hi); }
+  .btn-allin   { background: var(--btn-allin); }
+  .btn-allin:hover   { background: var(--btn-allin-hi); }
+  .btn-primary { background: var(--btn-primary); color: #071126; }
+  .btn-primary:hover { background: var(--btn-primary-hi); }
+  .btn-owner   { background: var(--btn-owner); }
+  .btn-owner:hover   { background: var(--btn-owner-hi); }
+  .btn-ghost   { background: rgba(255, 255, 255, 0.08); border-color: var(--glass-border); }
+  .btn-ghost:hover   { background: rgba(255, 255, 255, 0.16); }
+
+  /* ---------- 移动端按钮尺寸别名 ---------- */
+  .mobile-btn {
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #fff;
+    border: 1px solid transparent;
+    min-width: 0;
+    width: 100%;
+    height: 44px;
+    transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.18s, filter 0.18s, background 0.18s;
+    will-change: transform;
+  }
+  .mobile-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+  }
+  .mobile-btn:active {
+    transform: scale(0.95);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+  }
+  .mobile-btn:disabled {
+    background: #6b7280;
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.7);
+    pointer-events: none;
+  }
+  .mobile-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+  }
+  .mobile-btn.two-line { height: 52px; }
+  .mobile-btn.small    { height: 36px; font-size: 13px; font-weight: 600; }
+
+  .mobile-btn.primary  { background: var(--btn-call);  color: #fff; }
+  .mobile-btn.secondary{ background: var(--btn-check); color: #fff; }
+  .mobile-btn.danger   { background: var(--btn-fold);  color: #fff; }
+  .mobile-btn.raise    { background: var(--btn-raise);  color: #071126; }
+  .mobile-btn.quick    { background: #fb923c;          color: #071126; }
+  .mobile-btn.allin    { background: var(--btn-allin); color: #fff; }
+  .mobile-btn.owner    { color: #fff; }
+  .owner-enabled  { background: var(--btn-owner); }
+  .owner-disabled { background: #374151; opacity: 0.7; }
+}
+
+/* ============================================================
+   关键帧动画
+   ============================================================ */
+@keyframes turn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.55); }
+  50%      { box-shadow: 0 0 0 8px rgba(250, 204, 21, 0); }
+}
+@keyframes card-deal {
+  from { opacity: 0; transform: rotateY(90deg) translateY(-8px); }
+  to   { opacity: 1; transform: rotateY(0) translateY(0); }
+}
+@keyframes chip-bet {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
 }

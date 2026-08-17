@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-800 text-white p-safe">
+  <div class="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_center,#0a0f0a,#000000)] text-white p-safe">
     <div class="w-full max-w-md px-4">
-      <div class="rounded-xl p-6 flex flex-col gap-4 items-stretch bg-black/40 backdrop-blur-sm">
+      <div class="glass-card p-6 flex flex-col gap-4 items-stretch">
         <h1 class="text-3xl sm:text-4xl font-bold text-center">🎲 德州扑克大厅</h1>
 
         <label class="text-xs text-white/80">昵称</label>
@@ -9,7 +9,7 @@
           v-model="nickname"
           type="text"
           placeholder="输入你的昵称"
-          :class="['rounded-xl w-full text-black border bg-white/95', isMobile ? 'p-5 text-xl' : 'p-4 text-lg']"
+          :class="['glass-input w-full text-black', isMobile ? 'p-5 text-xl' : 'p-4 text-lg']"
         />
 
         <label class="text-xs text-white/80">房间号</label>
@@ -17,12 +17,12 @@
           v-model="roomId"
           type="text"
           placeholder="输入房间号"
-          :class="['rounded-xl w-full text-black border bg-white/95', isMobile ? 'p-5 text-xl' : 'p-4 text-lg']"
+          :class="['glass-input w-full text-black', isMobile ? 'p-5 text-xl' : 'p-4 text-lg']"
         />
 
         <button
           @click="joinRoom"
-          :class="['mt-2 hover:bg-yellow-600 text-black font-bold rounded-xl shadow-lg text-lg', isMobile ? 'bg-yellow-500 py-4 text-xl' : 'bg-yellow-500 py-3']"
+          :class="['btn btn-primary mt-2 w-full text-lg', isMobile ? 'py-4 text-xl' : 'py-3']"
         >
           进入德州扑克房间
         </button>
