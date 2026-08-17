@@ -2,7 +2,10 @@
   <div class="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_center,#0a0f0a,#000000)] text-white p-safe">
     <div class="w-full max-w-md px-4">
       <div class="glass-card p-6 flex flex-col gap-4 items-stretch">
-        <h1 class="text-3xl sm:text-4xl font-bold text-center">🎲 德州扑克大厅</h1>
+        <div class="text-center">
+          <h1 class="text-3xl sm:text-4xl font-bold">PokerYY</h1>
+          <div class="text-xs sm:text-sm text-white/60 tracking-wider mt-1">德州扑克网站</div>
+        </div>
 
         <label class="text-xs text-white/80">昵称</label>
         <input

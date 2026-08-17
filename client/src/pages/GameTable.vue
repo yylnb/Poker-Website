@@ -14,7 +14,7 @@
 
         <!-- 房间标题 -->
         <div class="w-full text-center text-white/90 text-sm mt-10 mb-2">
-          德州扑克 -- 房间号：{{ store.roomId }}
+          PokerYY -- 房间号：{{ store.roomId }}
         </div>
       </div>
 
