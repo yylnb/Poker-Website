@@ -23,7 +23,7 @@
         <!-- 中央：公共牌与底池显示 -->
         <div class="mx-auto w-full mt-3 sm:mt-5" style="max-width:900px;">
         <div
-          class="mx-auto glass-card bg-emerald-900/50 flex items-center justify-center"
+          class="mx-auto felt flex items-center justify-center"
           :style="tableStyle"
         >
           <div class="flex flex-col items-center gap-3 p-3 w-full">
@@ -42,7 +42,9 @@
               </div>
             </div>
 
-            <div class="text-white/80 text-sm">底池: {{ pot }}K</div>
+            <div class="pot-badge">
+              <span class="chip-icon"></span>底池 {{ pot }}K
+            </div>
 
             <div class="mt-1 text-sm text-white/90 text-center">
               当前回合:
@@ -71,11 +73,11 @@
             :class="{ 'turn-active': currentTurnId === player.id }"
           >
             <div
-              class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+              class="w-12 h-12 rounded-full flex items-center justify-center text-base font-medium flex-shrink-0"
               :class="isLocalPlayer(player) ? 'ring-4 ring-green-400' : ''"
               :style="{ background: isLocalPlayer(player) ? 'linear-gradient(#10b981,#065f46)' : 'linear-gradient(#f59e0b,#b45309)' }"
             >
-              {{ player.nickname }}
+              {{ (player.nickname || '?').charAt(0) }}
             </div>
 
             <div class="flex-1 min-w-0">
@@ -92,7 +94,9 @@
 
               <div class="text-xs text-white/90">
                 <div class="font-medium truncate">{{ player.chips }}K</div>
-                <div v-if="player.currentBet" class="bet-chip text-[11px] text-yellow-200" :key="player.currentBet">注: {{ player.currentBet }}K</div>
+                <div v-if="player.currentBet" class="bet-chip inline-flex items-center gap-1 text-[11px] text-yellow-200" :key="player.currentBet">
+                  <span class="chip-icon"></span>{{ player.currentBet }}K
+                </div>
                 <div v-if="player.folded" class="text-[11px] text-red-300">已弃</div>
                 <div v-if="currentTurnId === player.id" class="mt-1 inline-block px-2 py-0.5 text-[11px] bg-yellow-300 text-black rounded">
                   当前回合
@@ -110,11 +114,11 @@
             :class="{ 'turn-active': currentTurnId === player.id }"
           >
             <div
-              class="w-14 h-14 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0"
+              class="w-14 h-14 rounded-full flex items-center justify-center text-base font-medium flex-shrink-0"
               :class="isLocalPlayer(player) ? 'ring-4 ring-green-400' : ''"
               :style="{ background: isLocalPlayer(player) ? 'linear-gradient(#10b981,#065f46)' : 'linear-gradient(#f59e0b,#b45309)' }"
             >
-              {{ player.nickname }}
+              {{ (player.nickname || '?').charAt(0) }}
             </div>
 
             <div class="flex-1 min-w-0">
@@ -131,7 +135,9 @@
 
               <div class="text-xs text-white/90">
                 <div class="font-medium truncate">{{ player.chips }}K</div>
-                <div v-if="player.currentBet" class="bet-chip text-[11px] text-yellow-200" :key="player.currentBet">注: {{ player.currentBet }}K</div>
+                <div v-if="player.currentBet" class="bet-chip inline-flex items-center gap-1 text-[11px] text-yellow-200" :key="player.currentBet">
+                  <span class="chip-icon"></span>{{ player.currentBet }}K
+                </div>
                 <div v-if="player.folded" class="text-[11px] text-red-300">已弃</div>
                 <div v-if="currentTurnId === player.id" class="mt-1 inline-block px-2 py-0.5 text-[11px] bg-yellow-300 text-black rounded">
                   当前回合
@@ -314,7 +320,7 @@
             :class="{'scale-100 opacity-100': showdownModal, 'scale-95 opacity-0': !showdownModal}"
           >
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-2xl font-bold">摊牌结果</h3>
+              <h3 class="text-2xl font-bold text-gray-900">摊牌结果</h3>
               <button @click="closeModal" class="text-sm text-gray-500 hover:text-gray-800">关闭</button>
             </div>
 
@@ -352,7 +358,7 @@
 
             <div class="mt-4 flex justify-end gap-2">
               <button v-if="isOwner" @click="restartGame" class="btn btn-call px-4 py-2">Restart</button>
-              <button @click="closeModal" class="btn btn-ghost px-4 py-2">关闭</button>
+              <button @click="closeModal" class="btn btn-secondary px-4 py-2">关闭</button>
             </div>
           </div>
         </div>
