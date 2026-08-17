@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_center,#0a0f0a,#000000)] text-white p-safe">
+  <div class="min-h-screen flex items-center justify-center bg-[radial-gradient(circle,#0a0f0a,#000000)] text-white p-safe">
     <div class="w-full max-w-md px-4">
       <div class="glass-card p-4 sm:p-6 flex flex-col gap-4 items-stretch">
         <div class="text-center">

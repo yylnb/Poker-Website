@@ -1,5 +1,5 @@
 <template>
-  <div class="h-dvh flex flex-col items-center justify-start bg-[radial-gradient(circle_at_center,#0a0f0a,#000000)] overflow-hidden p-safe">
+  <div class="h-dvh flex flex-col items-center justify-start bg-[radial-gradient(circle,#0a0f0a,#000000)] overflow-hidden p-safe">
     <div class="relative w-full mx-auto px-3 flex flex-col flex-1 min-h-0" style="max-width:980px; box-sizing: border-box;">
 
       <!-- 顶部：返回按钮 + 房间标题（flex-shrink-0 不参与滚动） -->

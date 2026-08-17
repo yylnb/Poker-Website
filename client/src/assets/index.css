@@ -8,7 +8,7 @@ html, body, #app {
 
 /* 简单的桌面背景 fallback */
 body {
-  background: radial-gradient(circle at center, #0a0f0a 0%, #000000 100%);
+  background: radial-gradient(circle, #0a0f0a, #000000);
   color: #fff;
 }
 
@@ -64,6 +64,47 @@ body {
     background: rgba(2, 6, 23, 0.55);
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+  }
+
+  /* 赌桌台呢质感：径向渐变模拟台呢光照 + 内阴影晕影 + 金色细边 */
+  .felt {
+    background: radial-gradient(ellipse, #065f46, #022c22);
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5), 0 8px 32px rgba(2, 6, 23, 0.55);
+    border: 2px solid rgba(250, 204, 21, 0.4);
+    border-radius: 24px;
+  }
+
+  /* 底池徽章：椭圆形深底 + 金边 + 金字 */
+  .pot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    border-radius: 999px;
+    padding: 4px 16px;
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  /* 筹码图标：红白分段 conic-gradient + 黄心，模拟真实扑克筹码 */
+  .chip-icon {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, #fbbf24 0 30%, transparent 31%),
+      conic-gradient(from 0deg,
+        #dc2626 0 45deg, #ffffff 45deg 90deg,
+        #dc2626 90deg 135deg, #ffffff 135deg 180deg,
+        #dc2626 180deg 225deg, #ffffff 225deg 270deg,
+        #dc2626 270deg 315deg, #ffffff 315deg 360deg);
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    flex-shrink: 0;
   }
 
   /* 玻璃输入框 */
