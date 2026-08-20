@@ -16,6 +16,21 @@
         <div class="w-full text-center text-white/90 text-sm mt-10 mb-2">
           PokerYY -- 房间号：{{ store.roomId }}
         </div>
+
+        <div v-if="isOwner" class="ai-toolbar flex items-center justify-center gap-2 mb-2">
+          <button
+            @click="addAiPlayer"
+            :disabled="!canManageBots || botCount >= 3"
+            class="btn btn-ghost ai-add-button inline-flex items-center justify-center gap-2 text-xs"
+            title="添加 AI 玩家"
+          >
+            <Bot :size="16" aria-hidden="true" />
+            <Plus :size="14" aria-hidden="true" />
+            <span>添加 AI</span>
+            <span class="text-white/60">{{ botCount }}/3</span>
+          </button>
+          <span v-if="!canManageBots" class="text-[11px] text-white/50">本局结束后可调整</span>
+        </div>
       </div>
 
       <!-- 中部可滚动区：台面 + 玩家区（顶部和底部控制栏均不滚动） -->
@@ -64,33 +79,46 @@
       <div class="mt-6 px-3">
         <div
           v-if="isMobile"
-          class="grid grid-cols-2 gap-3 justify-center"
+          class="grid grid-cols-2 gap-3 justify-center items-start"
         >
           <div
             v-for="(player, index) in players"
             :key="player.id"
-            class="player-card glass-card text-white p-3 flex gap-3 items-center w-full"
+            class="player-card glass-card relative text-white p-3 flex flex-wrap gap-3 items-start self-start w-full"
             :class="{ 'turn-active': currentTurnId === player.id }"
           >
+            <button
+              v-if="player.isBot && canManageBots"
+              @click="removeAiPlayer(player.id)"
+              class="bot-remove-button"
+              :title="`移除 ${player.nickname}`"
+              :aria-label="`移除 ${player.nickname}`"
+            >
+              <X :size="14" aria-hidden="true" />
+            </button>
             <div
               class="w-12 h-12 rounded-full flex items-center justify-center text-base font-medium flex-shrink-0"
               :class="isLocalPlayer(player) ? 'ring-4 ring-green-400' : ''"
-              :style="{ background: isLocalPlayer(player) ? 'linear-gradient(#10b981,#065f46)' : 'linear-gradient(#f59e0b,#b45309)' }"
+              :style="{ background: player.isBot ? 'linear-gradient(#475569,#1e293b)' : isLocalPlayer(player) ? 'linear-gradient(#10b981,#065f46)' : 'linear-gradient(#f59e0b,#b45309)' }"
             >
-              {{ (player.nickname || '?').charAt(0) }}
+              <Bot v-if="player.isBot" :size="22" aria-hidden="true" />
+              <span v-else>{{ (player.nickname || '?').charAt(0) }}</span>
             </div>
 
             <div class="flex-1 min-w-0">
-              <div class="flex gap-2 mb-2">
-                <div
-                  v-for="(card, cIndex) in player.hand"
-                  :key="cIndex"
-                  class="w-11 h-14 rounded-lg bg-white text-black flex items-center justify-center text-xs"
-                >
-                  <span v-if="isLocalPlayer(player) || stage === 'showdown'" :class="cardColor(card)">{{ card }}</span>
-                  <span v-else>?</span>
+              <div class="font-medium text-xs truncate pr-4 mb-1">{{ player.nickname }}</div>
+              <Transition name="hand-slot">
+                <div v-if="player.hand?.length" class="hand-slot flex gap-2">
+                  <div
+                    v-for="(card, cIndex) in player.hand"
+                    :key="cIndex"
+                    class="w-11 h-14 rounded-lg bg-white text-black flex items-center justify-center text-xs"
+                  >
+                    <span v-if="isLocalPlayer(player) || stage === 'showdown'" :class="cardColor(card)">{{ card }}</span>
+                    <span v-else>?</span>
+                  </div>
                 </div>
-              </div>
+              </Transition>
 
               <div class="text-xs text-white/90">
                 <div class="font-medium truncate">{{ player.chips }}K</div>
@@ -101,37 +129,65 @@
                 <div v-if="currentTurnId === player.id" class="mt-1 inline-block px-2 py-0.5 text-[11px] bg-yellow-300 text-black rounded">
                   当前回合
                 </div>
+              </div>
+
+            </div>
+
+            <div
+              v-if="player.isBot && (aiStatuses[player.id] === 'thinking' || aiMessages[player.id])"
+              class="ai-message-slot"
+            >
+              <div v-if="aiStatuses[player.id] === 'thinking'" class="ai-thinking">
+                <LoaderCircle :size="13" class="animate-spin" aria-hidden="true" />
+                思考中
+              </div>
+              <div v-else class="ai-speech" :title="aiMessages[player.id].message">
+                <span>{{ aiMessages[player.id].message }}</span>
+                <span v-if="aiMessages[player.id].fallback" class="ai-fallback">降级</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-else class="players-grid flex flex-wrap gap-3 justify-center">
+        <div v-else class="players-grid flex flex-wrap gap-3 justify-center items-start">
           <div
             v-for="(player, index) in players"
             :key="player.id"
-            class="player-card glass-card text-white p-3 flex gap-3 items-center w-44"
+            class="player-card glass-card relative text-white p-3 flex flex-wrap gap-3 items-start self-start w-48"
             :class="{ 'turn-active': currentTurnId === player.id }"
           >
+            <button
+              v-if="player.isBot && canManageBots"
+              @click="removeAiPlayer(player.id)"
+              class="bot-remove-button"
+              :title="`移除 ${player.nickname}`"
+              :aria-label="`移除 ${player.nickname}`"
+            >
+              <X :size="14" aria-hidden="true" />
+            </button>
             <div
               class="w-14 h-14 rounded-full flex items-center justify-center text-base font-medium flex-shrink-0"
               :class="isLocalPlayer(player) ? 'ring-4 ring-green-400' : ''"
-              :style="{ background: isLocalPlayer(player) ? 'linear-gradient(#10b981,#065f46)' : 'linear-gradient(#f59e0b,#b45309)' }"
+              :style="{ background: player.isBot ? 'linear-gradient(#475569,#1e293b)' : isLocalPlayer(player) ? 'linear-gradient(#10b981,#065f46)' : 'linear-gradient(#f59e0b,#b45309)' }"
             >
-              {{ (player.nickname || '?').charAt(0) }}
+              <Bot v-if="player.isBot" :size="24" aria-hidden="true" />
+              <span v-else>{{ (player.nickname || '?').charAt(0) }}</span>
             </div>
 
             <div class="flex-1 min-w-0">
-              <div class="flex gap-2 mb-2">
-                <div
-                  v-for="(card, cIndex) in player.hand"
-                  :key="cIndex"
-                  class="w-12 h-16 rounded-lg bg-white text-black flex items-center justify-center text-xs"
-                >
-                  <span v-if="isLocalPlayer(player) || stage === 'showdown'" :class="cardColor(card)">{{ card }}</span>
-                  <span v-else>?</span>
+              <div class="font-medium text-xs truncate pr-4 mb-1">{{ player.nickname }}</div>
+              <Transition name="hand-slot">
+                <div v-if="player.hand?.length" class="hand-slot flex gap-2">
+                  <div
+                    v-for="(card, cIndex) in player.hand"
+                    :key="cIndex"
+                    class="w-12 h-16 rounded-lg bg-white text-black flex items-center justify-center text-xs"
+                  >
+                    <span v-if="isLocalPlayer(player) || stage === 'showdown'" :class="cardColor(card)">{{ card }}</span>
+                    <span v-else>?</span>
+                  </div>
                 </div>
-              </div>
+              </Transition>
 
               <div class="text-xs text-white/90">
                 <div class="font-medium truncate">{{ player.chips }}K</div>
@@ -142,6 +198,21 @@
                 <div v-if="currentTurnId === player.id" class="mt-1 inline-block px-2 py-0.5 text-[11px] bg-yellow-300 text-black rounded">
                   当前回合
                 </div>
+              </div>
+
+            </div>
+
+            <div
+              v-if="player.isBot && (aiStatuses[player.id] === 'thinking' || aiMessages[player.id])"
+              class="ai-message-slot"
+            >
+              <div v-if="aiStatuses[player.id] === 'thinking'" class="ai-thinking">
+                <LoaderCircle :size="13" class="animate-spin" aria-hidden="true" />
+                思考中
+              </div>
+              <div v-else class="ai-speech" :title="aiMessages[player.id].message">
+                <span>{{ aiMessages[player.id].message }}</span>
+                <span v-if="aiMessages[player.id].fallback" class="ai-fallback">降级</span>
               </div>
             </div>
           </div>
@@ -157,7 +228,7 @@
           <div class="w-full flex items-center gap-2">
             <button
               @click="startGame"
-              :disabled="!isOwner || stage === 'showdown'"
+              :disabled="!isOwner || handInProgress || stage === 'showdown'"
               class="btn btn-owner min-w-[90px] px-3 py-2 text-sm"
             >
               开始游戏
@@ -260,7 +331,7 @@
         >
           <!-- 房主小控制 -->
           <div class="grid grid-cols-2 gap-2 p-2">
-            <button @click="startGame" :disabled="!isOwner || stage === 'showdown'" :class="['mobile-btn small owner', isOwner && stage !== 'showdown' ? 'owner-enabled' : 'owner-disabled']">开始游戏</button>
+            <button @click="startGame" :disabled="!isOwner || handInProgress || stage === 'showdown'" :class="['mobile-btn small owner', isOwner && !handInProgress && stage !== 'showdown' ? 'owner-enabled' : 'owner-disabled']">开始游戏</button>
             <button v-if="stage === 'showdown'" @click="restartGame" :disabled="!isOwner" :class="['mobile-btn small owner', isOwner ? 'owner-enabled' : 'owner-disabled']">Restart</button>
           </div>
 
@@ -358,7 +429,7 @@
 
             <div class="mt-4 flex justify-end gap-2">
               <button v-if="isOwner" @click="restartGame" class="btn btn-call px-4 py-2">Restart</button>
-              <button @click="closeModal" class="btn btn-secondary px-4 py-2">关闭</button>
+              <button @click="closeModal" class="px-4 py-2 rounded border border-gray-300 bg-white text-gray-700 font-semibold hover:bg-gray-100">关闭</button>
             </div>
           </div>
         </div>
@@ -384,6 +455,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { io } from "socket.io-client";
+import { Bot, LoaderCircle, Plus, X } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 import { useUserStore } from "../stores/user";
 import { actionFeedback } from "../utils/feedback";
@@ -402,6 +474,10 @@ const ownerNickname = ref(null);
 const currentMaxBet = ref(0);
 const currentTurnId = ref(null);
 const currentTurnNickname = ref(null);
+const handInProgress = ref(false);
+const aiStatuses = ref({});
+const aiMessages = ref({});
+const aiMessageTimers = new Map();
 
 const showdownModal = ref(false);
 const showdownPots = ref([]);
@@ -415,7 +491,7 @@ window.addEventListener("resize", handleResize);
 
 const tableStyle = computed(() => {
   const w = Math.min(window.innerWidth - 40, isMobile.value ? 420 : 600);
-  const h = Math.min(window.innerHeight * (isMobile.value ? 0.38 : 0.45), isMobile.value ? 260 : 400);
+  const h = Math.min(window.innerHeight * (isMobile.value ? 0.32 : 0.34), isMobile.value ? 220 : 320);
   return { width: `${w}px`, height: `${h}px` };
 });
 
@@ -436,6 +512,20 @@ watch(localPlayer, (p) => {
   if (p) raiseSlider.value = Math.min(10, p.chips || 10) || raiseStep.value;
 });
 
+function applyRoom(room) {
+  if (!room) return;
+  players.value = room.players || [];
+  communityCards.value = room.communityCards || [];
+  stage.value = room.stage || "preflop";
+  ownerId.value = room.ownerId || null;
+  ownerNickname.value = room.players?.find(p => p.id === room.ownerId)?.nickname || null;
+  pot.value = room.pot || 0;
+  currentMaxBet.value = room.currentMaxBet || 0;
+  currentTurnId.value = room.currentTurnId || null;
+  currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
+  handInProgress.value = Boolean(room.handInProgress);
+}
+
 onMounted(() => {
   socket.emit("joinRoom", {
     roomId: store.roomId,
@@ -443,46 +533,22 @@ onMounted(() => {
   });
 
   socket.on("roomData", (room) => {
-    players.value = room.players || [];
-    communityCards.value = room.communityCards || [];
-    stage.value = room.stage || "preflop";
-    ownerId.value = room.ownerId || null;
-    ownerNickname.value = room.players?.find(p => p.id === room.ownerId)?.nickname || null;
-    pot.value = room.pot || 0;
-    currentMaxBet.value = room.currentMaxBet || 0;
-    currentTurnId.value = room.currentTurnId || null;
-    currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
+    applyRoom(room);
   });
 
   socket.on("gameStarted", (room) => {
-    players.value = room.players;
-    communityCards.value = room.communityCards;
-    stage.value = room.stage;
-    pot.value = room.pot || 0;
-    currentMaxBet.value = room.currentMaxBet || 0;
-    ownerId.value = room.ownerId || null;
-    ownerNickname.value = room.players?.find(p => p.id === room.ownerId)?.nickname || null;
-    currentTurnId.value = room.currentTurnId || null;
-    currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
+    applyRoom(room);
     showdownModal.value = false;
     showdownPots.value = [];
   });
 
   socket.on("stageUpdated", (room) => {
-    communityCards.value = room.communityCards;
-    stage.value = room.stage;
-    pot.value = room.pot || 0;
-    currentMaxBet.value = room.currentMaxBet || 0;
-    players.value = room.players;
-    currentTurnId.value = room.currentTurnId || null;
-    currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
+    applyRoom(room);
     if (stageTextMap[room.stage]) showAnnounce("下一轮：" + stageTextMap[room.stage]);
   });
 
   socket.on("betPlaced", (room) => {
-    players.value = room.players;
-    currentMaxBet.value = room.currentMaxBet || 0;
-    pot.value = room.pot || 0;
+    applyRoom(room);
   });
 
   socket.on("turnUpdated", (payload) => {
@@ -491,29 +557,39 @@ onMounted(() => {
   });
 
   socket.on("playerFolded", (room) => {
-    players.value = room.players;
+    applyRoom(room);
   });
 
   socket.on("playerChecked", ({ room }) => {
-    players.value = room.players;
+    applyRoom(room);
   });
 
   socket.on("bettingRoundEnded", (room) => {
-    players.value = room.players || players.value;
-    pot.value = room.pot || pot.value;
-    currentTurnId.value = room.currentTurnId || null;
-    currentTurnNickname.value = room.players?.find(p => p.id === room.currentTurnId)?.nickname || null;
+    applyRoom(room);
     // 阶段推进由服务端自动完成，紧接着的 stageUpdated 会更新公共牌与新回合
   });
 
   socket.on("showdown", ({ pots, room }) => {
     showdownPots.value = pots || [];
-    players.value = room.players || players.value;
-    pot.value = room.pot || 0;
-    stage.value = room.stage || "showdown";
-    currentTurnId.value = room.currentTurnId || null;
+    applyRoom(room);
     showdownModal.value = true;
     if (stageTextMap.showdown) showAnnounce("下一轮：" + stageTextMap.showdown);
+  });
+
+  socket.on("aiStatus", ({ botId, status }) => {
+    aiStatuses.value = { ...aiStatuses.value, [botId]: status };
+  });
+
+  socket.on("aiAction", ({ botId, message, fallback }) => {
+    aiStatuses.value = { ...aiStatuses.value, [botId]: "idle" };
+    aiMessages.value = { ...aiMessages.value, [botId]: { message, fallback } };
+    if (aiMessageTimers.has(botId)) clearTimeout(aiMessageTimers.get(botId));
+    aiMessageTimers.set(botId, setTimeout(() => {
+      const nextMessages = { ...aiMessages.value };
+      delete nextMessages[botId];
+      aiMessages.value = nextMessages;
+      aiMessageTimers.delete(botId);
+    }, 8000));
   });
 
   socket.on("errorMessage", (err) => {
@@ -525,6 +601,8 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   socket.disconnect();
   if (announceTimer) clearTimeout(announceTimer);
+  for (const timer of aiMessageTimers.values()) clearTimeout(timer);
+  aiMessageTimers.clear();
 });
 
 function isLocalPlayer(player) {
@@ -532,6 +610,7 @@ function isLocalPlayer(player) {
 }
 
 function cardColor(card) {
+  if (!card) return 'text-gray-800';
   return (card.includes('♥') || card.includes('♦')) ? 'text-red-600' : 'text-gray-800';
 }
 
@@ -552,6 +631,8 @@ const stageTextMap = {
 };
 
 const isOwner = computed(() => socket.id === ownerId.value);
+const botCount = computed(() => players.value.filter(player => player.isBot).length);
+const canManageBots = computed(() => isOwner.value && (!handInProgress.value || stage.value === "showdown"));
 const isMyTurn = computed(() => socket.id === currentTurnId.value && localPlayer.value && !localPlayer.value.folded && localPlayer.value.chips > 0 && stage.value !== "showdown");
 const canCheck = computed(() => {
   const p = localPlayer.value;
@@ -561,6 +642,14 @@ const canCheck = computed(() => {
 
 function startGame() { socket.emit("startGame", store.roomId); }
 function restartGame() { if (!isOwner.value) return; socket.emit("restartGame", { roomId: store.roomId }); }
+function addAiPlayer() {
+  if (!canManageBots.value || botCount.value >= 3) return;
+  socket.emit("addBot", { roomId: store.roomId });
+}
+function removeAiPlayer(botId) {
+  if (!canManageBots.value) return;
+  socket.emit("removeBot", { roomId: store.roomId, botId });
+}
 function doCall() { if (!isMyTurn.value) return; actionFeedback("call"); socket.emit("call", { roomId: store.roomId }); }
 function doRaise(amount) {
   const amt = Math.max(0, Math.floor(Number(amount) || 0));
@@ -624,6 +713,82 @@ function goLobby() {
 .game-mid::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
 @media (max-width: 420px)  { .game-mid { padding-bottom: 240px; } }
 @media (min-width: 421px)  { .game-mid { padding-bottom: 100px; } }
+
+.ai-toolbar { min-height: 34px; }
+.ai-add-button { min-width: 132px; height: 34px; padding: 0 10px; }
+.players-grid { align-items: flex-start; }
+.player-card {
+  align-content: flex-start;
+  align-self: flex-start;
+  height: auto;
+}
+.hand-slot {
+  max-height: 64px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transform-origin: top;
+}
+.hand-slot-enter-active,
+.hand-slot-leave-active {
+  transition: max-height 180ms ease, margin-bottom 180ms ease, opacity 140ms ease, transform 180ms ease;
+}
+.hand-slot-enter-from,
+.hand-slot-leave-to {
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.ai-message-slot { flex: 0 0 100%; width: 100%; }
+.ai-thinking,
+.ai-speech {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.72);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.ai-speech > span:first-child {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+.ai-fallback {
+  flex-shrink: 0;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #a16207;
+  color: #fef9c3;
+  font-size: 9px;
+}
+.bot-remove-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.84);
+  color: rgba(255, 255, 255, 0.72);
+}
+.bot-remove-button:hover { background: #991b1b; color: #fff; }
+.bot-remove-button:focus-visible { outline: 2px solid #facc15; outline-offset: 2px; }
 
 /* 轮次提示全屏动画 */
 .announce-enter-active { transition: opacity .3s ease-out; }
