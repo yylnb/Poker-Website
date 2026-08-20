@@ -221,6 +221,25 @@ io.on("connection", (socket) => {
   });
 });
 
+// ============= 自动清理空房间 =============
+// 定期删除没有玩家的房间，防止房间号被永久占用。
+// 玩家全离开的空房间：1 小时后清理（给中途断线重连留时间）
+// 有玩家但超过 24 小时的房间：也清理（防止僵尸房间）
+setInterval(() => {
+  const now = Date.now();
+  for (const roomId in rooms) {
+    const room = rooms[roomId];
+    if (!room) continue;
+    const isEmpty = !room.players || room.players.length === 0;
+    const age = now - (room.createdAt || now);
+    // 空房间超过 1 小时，或任何房间超过 24 小时
+    if ((isEmpty && age > 60 * 60 * 1000) || age > 24 * 60 * 60 * 1000) {
+      console.log(`🧹 自动清理房间: ${roomId} (players=${room.players?.length || 0}, age=${Math.round(age/60000)}min)`);
+      delete rooms[roomId];
+    }
+  }
+}, 30 * 60 * 1000); // 每 30 分钟检查一次
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`服务器运行在端口 ${PORT}`);

@@ -29,6 +29,7 @@ export function createRoom(id, ownerId) {
     actionHistory: [],
     turnVersion: 0,
     aiTurnInFlight: false,
+    createdAt: Date.now(),   // 房间创建时间（用于自动清理）
   };
 }
 
